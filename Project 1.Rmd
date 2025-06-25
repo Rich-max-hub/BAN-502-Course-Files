@@ -1,0 +1,196 @@
+
+Ban502 Project
+Richard Mark
+
+
+```{r, include = FALSE}
+library(titanic)
+library(tidyverse)
+library(tidymodels)
+library(mice) #package for imputation
+library(VIM) #visualizing missingness
+library(naniar) #visualizing missingness
+library(skimr) #alternative way to view dataset summaries
+library(UpSetR) #visualizing missingness
+library(caret)
+library(skimr)
+library(gridExtra)
+library(vip)
+library(ranger)
+library(ggcorrplot)
+library(GGally)
+```
+
+```{r}
+train <- read_csv("C:/Users/RichardGMark/OneDrive - Renmar DME Inc/Desktop/Ban502/Project/product-failure-kaggle-competition-summer-25/train.csv")
+test <- read_csv("C:/Users/RichardGMark/OneDrive - Renmar DME Inc/Desktop/Ban502/Project/product-failure-kaggle-competition-summer-25/test.csv")
+
+train = train %>% mutate(product_code = as_factor(product_code)) %>%
+                  mutate(attribute_0 =as_factor(attribute_0)) %>%
+                  mutate(attribute_1 = as_factor(attribute_1)) %>%
+                  mutate(failure = as_factor(failure))%>%
+                  select(-attribute_1,-measurement_0,-measurement_1,-measurement_3,-measurement_4,-measurement_5,-measurement_6,-measurement_9,-attribute_0,
+                         -attribute_2,-attribute_3,-measurement_10,-measurement_11,-measurement_12,-measurement_13,-measurement_14,-measurement_15,
+                         -measurement_16,-measurement_17,-id)
+
+
+ test =  test %>% mutate(product_code = as_factor(product_code)) %>%
+                  mutate(attribute_0 =as_factor(attribute_0)) %>%
+                  mutate(attribute_1 = as_factor(attribute_1))%>%
+                   select(-attribute_1,,-measurement_0,-measurement_1,-measurement_3,-measurement_4,-measurement_5,-measurement_6,-measurement_9,
+                          -attribute_0,-attribute_2,-attribute_3,-measurement_10,-measurement_11,-measurement_12,-measurement_13,-measurement_14,
+                          -measurement_15,-measurement_16,-measurement_17)
+
+
+
+```
+
+```{r} 
+##Inspect the data set
+str(train)
+```
+```{r}
+summary(train)
+```
+
+
+```{r}
+skim(super)
+```
+```{r}
+##Visual for missingness
+
+vis_miss(super) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ggtitle("Missingness percentage by Variable")
+
+```
+
+```{r}
+glimpse(super)
+
+```
+```{r}
+##Visual for missingness
+gg_miss_var(super) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ggtitle("Missingness Variable by Amount")
+
+```
+```{r}
+
+ggplot(super, aes(x = failure)) +   geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)))
+
+```
+```{r}
+p1 = ggplot(super, aes(x = attribute_0, fill = failure)) + geom_bar(position = "fill")
+p2 = ggplot(super, aes(x = attribute_1, fill = failure)) + geom_bar(position = "fill")
+p3 = ggplot(super, aes(x = attribute_2, fill = failure)) + geom_bar(position = "fill")
+p4 = ggplot(super, aes(x = attribute_3, fill = failure)) + geom_bar(position = "fill")
+grid.arrange(p1,p2,p3,p4)
+```
+
+```{r}
+p5 = ggplot(super, aes(x = measurement_0, fill = failure)) + geom_bar(position = "fill")
+p6 = ggplot(super, aes(x = measurement_1, fill = failure)) + geom_bar(position = "fill")
+p7 = ggplot(super, aes(x = measurement_2, fill = failure)) + geom_bar(position = "fill")
+p8 = ggplot(super, aes(x = measurement_3, fill = failure)) + geom_bar(position = "fill")
+grid.arrange(p5,p6,p7,p8)
+```
+
+```{r}
+p9 = ggplot(super, aes(x = product_code, fill = failure)) + geom_bar(position = "fill")
+p10 = ggplot(super, aes(x = loading, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+grid.arrange(p9,p10)
+```
+
+```{r}
+p11 = ggplot(super, aes(x = measurement_4, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p12 = ggplot(super, aes(x = measurement_5, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p13 = ggplot(super, aes(x = measurement_6, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p14 = ggplot(super, aes(x = measurement_7, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+grid.arrange(p11,p12,p13, p14)
+```
+
+```{r}
+p15 = ggplot(super, aes(x = measurement_8, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p16 = ggplot(super, aes(x = measurement_9, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p17 = ggplot(super, aes(x = measurement_10, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p18 = ggplot(super, aes(x = measurement_11, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+grid.arrange(p15, p16,p17, p18)
+```
+
+```{r}
+p19 = ggplot(super, aes(x = measurement_12, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p20 = ggplot(super, aes(x = measurement_13, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p21 = ggplot(super, aes(x = measurement_14, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p22 = ggplot(super, aes(x = measurement_15, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+grid.arrange(p19, p20,p21, p22)
+```
+
+```{r}
+p23 = ggplot(super, aes(x = measurement_16, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p24 = ggplot(super, aes(x = measurement_17, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+grid.arrange(p23, p24)
+```
+```{r}
+## charts for PPT
+p25 = ggplot(super, aes(x = measurement_0, fill = failure)) + geom_bar(position = "fill")
+p26 = ggplot(super, aes(x = measurement_1, fill = failure)) + geom_bar(position = "fill")
+
+grid.arrange(p25,p26 )
+```
+```{r}
+p27 = ggplot(super, aes(x = measurement_2, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+p28 = ggplot(super, aes(x = measurement_4, fill = failure)) + geom_histogram(position = "fill", bins = 30)
+grid.arrange( p27,p28)
+
+```
+
+
+
+```{r}
+##Impute
+
+set.seed(1234) #sets seed for random number generator
+imp_super = mice(super, m=5, method='pmm', printFlag=FALSE)
+#m is the number of imputations, 5 is a reasonable value as a default
+#pmm is "predictive mean matching" = imputation method for numeric data
+#printFlag reduces amount of output
+summary(super)
+```
+```{r}
+super_complete = complete(imp_super) 
+summary(super_complete)
+```
+
+```{r}
+#step_corr(super_complete)
+#step_nzv(super_complete)
+#step_dummy(super_complete)
+str(super_complete)
+```
+
+
+
+
+
+```{r}
+ggpairs(super_complete %>% select(attribute_0,attribute_1,attribute_2, attribute_3))
+ggpairs(super_complete %>% select(attribute_2,loading,measurement_0,measurement_1))
+ggpairs(super_complete %>% select(measurement_2,measurement_3,measurement_4,measurement_5))
+ggpairs(super_complete %>% select(measurement_6,measurement_7,measurement_8,measurement_9))
+ggpairs(super_complete %>% select(measurement_10,measurement_11,measurement_12,measurement_13,measurement_6,measurement_7,measurement_8,measurement_9))
+```
+```{r}
+ggcorr(super_complete, label = "TRUE", label_round = 2) 
+```
+
+
+```{r}
+logmod = glm(failure ~ .,super_complete, family = "binomial")
+summary(logmod)
+
+```
+
